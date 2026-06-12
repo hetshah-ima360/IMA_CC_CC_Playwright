@@ -1,0 +1,17 @@
+{
+  "name": "ima360-commitment-metrics-playwright",
+  "version": "1.1.0",
+  "description": "Data-driven Playwright automation for IMA360 Commitment Metrics. Each scenario is one JSON file (holding one or more contracts) plus one spec that creates them.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.11.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.4.0"
+  }
+}
