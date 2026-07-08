@@ -1,0 +1,76 @@
+{
+  "scenario": "IMA_CC_CM_18",
+  "description": "IMA_CC_CM_18",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_18",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_18",
+        "startDate": "01/01/2022",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(MHS)",
+        "contractSubgroup": "(BG)",
+        "origin": "(SA)"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "nationalGroup": "240"
+        },
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "nationalGroup": "240",
+          "subgroup": "000910",
+          "exclude": true
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "NET SALES - MPB - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "56",
+          "unit": "%",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "15",
+              "unit": "%",
+              "outcomeValue": "0.8",
+              "shortfallValue": "3",
+              "shortfallScale": "0.3",
+              "shortfallUnit": "%"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "11/01/2022",
+    "calcPeriodTo": "11/30/2022",
+    "stagingContractNumber": "653",
+    "expected": [
+      {
+        "formula": "NET SALES - MPB - NET FEES",
+        "commitmentMet": "No",
+        "actualValue": "0",
+        "penaltyValue": "4.7"
+      }
+    ]
+  }
+}

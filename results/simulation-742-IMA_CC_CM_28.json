@@ -1,0 +1,17 @@
+[
+  {
+    "scenario": "IMA_CC_CM_28",
+    "contractNumber": "742",
+    "description": "IMA_CC_CM_28",
+    "commitmentNumber": "IMA_CC_CM_28 (742)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "NET SALES - NET FEES",
+    "actualValue1": "2,579,085.11",
+    "commitmentValue1": "10,000.00",
+    "commitmentMet": "Yes",
+    "penaltyValue": "",
+    "status": "OK",
+    "runAt": "2026-06-24T20:26:13.498Z"
+  }
+]

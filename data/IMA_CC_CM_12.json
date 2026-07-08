@@ -1,0 +1,127 @@
+{
+  "scenario": "IMA_CC_CM_12",
+  "description": "IMA_CC_CM_12",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_12",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_12",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(CPH)",
+        "contractSubgroup": "(BG)",
+        "origin": "(SA)"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "customerNumber": "152227",
+          "nationalGroup": "1900",
+          "subgroup": "999",
+          "region": "999",
+          "district": "701000"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "TIER_GCR:GX- DS- FEE",
+          "calcLevel": "Customer",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "5400",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "3800",
+              "unit": "%",
+              "outcomeValue": "0.8",
+              "shortfallValue": "160",
+              "shortfallScale": "0.5",
+              "shortfallUnit": "%"
+            }
+          ]
+        },
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Customer",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "620",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "350",
+              "unit": "%",
+              "outcomeValue": "0.25",
+              "shortfallValue": "25",
+              "shortfallScale": "0.25",
+              "shortfallUnit": "%"
+            }
+          ]
+        },
+        {
+          "formulaId": "TIER_GCR:GX- SPC - GLP1 - DS - FEE",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "54",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "25",
+              "unit": "%",
+              "outcomeValue": "0.1",
+              "shortfallValue": "4",
+              "shortfallScale": "0.25",
+              "shortfallUnit": "%"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Customer",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2024",
+    "calcPeriodTo": "07/31/2024",
+    "stagingContractNumber": "618",
+    "expected": [
+      {
+        "formula": "TIER_GCR:GX- DS- FEE",
+        "commitmentMet": "No",
+        "actualValue": "7.18",
+        "penaltyValue": "5.3"
+      },
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "Yes",
+        "actualValue": "58460.62"
+      },
+      {
+        "formula": "TIER_GCR:GX- SPC - GLP1 - DS - FEE",
+        "commitmentMet": "No",
+        "actualValue": "7.89",
+        "penaltyValue": "1.35"
+      }
+    ]
+  }
+}

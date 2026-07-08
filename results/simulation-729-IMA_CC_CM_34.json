@@ -1,0 +1,30 @@
+[
+  {
+    "scenario": "IMA_CC_CM_34",
+    "contractNumber": "729",
+    "description": "IMA_CC_CM_34",
+    "commitmentNumber": "IMA_CC_CM_34 (729)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "TIER_OSR: OS - DS - FLU - FEE",
+    "actualValue1": "20.46",
+    "commitmentValue1": "30.00",
+    "commitmentMet": "No",
+    "status": "OK",
+    "runAt": "2026-06-24T15:21:55.731Z"
+  },
+  {
+    "scenario": "IMA_CC_CM_34",
+    "contractNumber": "729",
+    "description": "IMA_CC_CM_34",
+    "commitmentNumber": "IMA_CC_CM_34 (729)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "NET SALES - NET FEES",
+    "actualValue1": "442,602.27",
+    "commitmentValue1": "500,000.00",
+    "commitmentMet": "No",
+    "status": "OK",
+    "runAt": "2026-06-24T15:21:55.731Z"
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "scenario": "IMA_CC_CM_05",
+    "contractNumber": "750",
+    "description": "IMA_CC_CM_05",
+    "commitmentNumber": "IMA_CC_CM_05 (750)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "TIER_GCR:GX - DS - BIO - SPC - GLP1 - LEAD - FEE",
+    "actualValue1": "1.33",
+    "commitmentValue1": "8,000.00",
+    "commitmentMet": "No",
+    "penaltyValue": "",
+    "status": "OK",
+    "runAt": "2026-06-25T13:01:54.154Z"
+  },
+  {
+    "scenario": "IMA_CC_CM_05",
+    "contractNumber": "750",
+    "description": "IMA_CC_CM_05",
+    "commitmentNumber": "IMA_CC_CM_05 (750)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "TIER_GX:GX - DS - FEE",
+    "actualValue1": "93,734.07",
+    "commitmentValue1": "5,000.00",
+    "commitmentMet": "Yes",
+    "penaltyValue": "",
+    "status": "OK",
+    "runAt": "2026-06-25T13:01:54.154Z"
+  },
+  {
+    "scenario": "IMA_CC_CM_05",
+    "contractNumber": "750",
+    "description": "IMA_CC_CM_05",
+    "commitmentNumber": "IMA_CC_CM_05 (750)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "TIER_GCR:GX- SPC - GLP1 - DS - FEE",
+    "actualValue1": "33.03",
+    "commitmentValue1": "6,800.00",
+    "commitmentMet": "No",
+    "penaltyValue": "",
+    "status": "OK",
+    "runAt": "2026-06-25T13:01:54.154Z"
+  }
+]

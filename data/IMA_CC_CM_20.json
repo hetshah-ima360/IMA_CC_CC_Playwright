@@ -1,0 +1,136 @@
+{
+  "scenario": "IMA_CC_CM_20",
+  "description": "IMA_CC_CM_20",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_20",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_20",
+        "startDate": "01/01/2022",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(MHS)",
+        "contractSubgroup": "(BG)",
+        "origin": "(MCF)"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "nationalGroup": "498"
+        },
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "nationalGroup": "498",
+          "subgroup": "2478",
+          "region": "2",
+          "exclude": true
+        },
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "nationalGroup": "498",
+          "subgroup": "40260",
+          "exclude": true
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "( FLW RX GX SALES - FLW RX GX NET FEES ) * 100 / ( FLW RX SALES - FLW RX FEES )",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "55000",
+          "unit": "USD",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "25000",
+              "unit": "USD",
+              "outcomeValue": "0.8",
+              "shortfallValue": "500",
+              "shortfallScale": "0.6",
+              "shortfallUnit": "USD"
+            }
+          ]
+        },
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "250",
+          "unit": "USD",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "100",
+              "unit": "USD",
+              "outcomeValue": "0.4",
+              "shortfallValue": "25",
+              "shortfallScale": "0.25",
+              "shortfallUnit": "USD"
+            }
+          ]
+        },
+        {
+          "formulaId": "NET SALES - MPB - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "990",
+          "unit": "USD",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "590",
+              "unit": "USD",
+              "outcomeValue": "0.6",
+              "shortfallValue": "30",
+              "shortfallScale": "0.4",
+              "shortfallUnit": "USD"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2024",
+    "calcPeriodTo": "07/31/2024",
+    "stagingContractNumber": "655",
+    "expected": [
+      {
+        "formula": "( FLW RX GX SALES - FLW RX GX NET FEES ) * 100 / ( FLW RX SALES - FLW RX FEES )"
+      },
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "Yes",
+        "actualValue": "26729325.12"
+      },
+      {
+        "formula": "NET SALES - MPB - NET FEES",
+        "commitmentMet": "No",
+        "actualValue": "0"
+      }
+    ]
+  }
+}

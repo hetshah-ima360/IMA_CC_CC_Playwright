@@ -1,0 +1,75 @@
+{
+  "scenario": "IMA_CC_CM_29",
+  "description": "IMA_CC_CM_29",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_29",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_29",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(Community Pharmacy (CPH))",
+        "contractSubgroup": "(Buying Group (BG))",
+        "origin": "(Supply Agreement (SA))"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "nationalGroup": "1900",
+          "subgroup": "999"
+        },
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "nationalGroup": "499"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "10000000",
+          "unit": "USD",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "<=  (LE)",
+              "value": "10000000",
+              "unit": "USD  (USD)",
+              "outcomeValue": "0.5",
+              "shortfallValue": "%  (%)",
+              "shortfallScale": "1000000",
+              "shortfallUnit": "0.1"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2026",
+    "calcPeriodTo": "07/31/2026",
+    "stagingContractNumber": "714",
+    "expected": [
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "No",
+        "actualValue": "7643920.49",
+        "penaltyValue": "0.7"
+      }
+    ]
+  }
+}

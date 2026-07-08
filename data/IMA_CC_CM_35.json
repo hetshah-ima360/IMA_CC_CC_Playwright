@@ -1,0 +1,87 @@
+{
+  "scenario": "IMA_CC_CM_35",
+  "description": "IMA_CC_CM_35",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_35",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_35",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(Community Pharmacy (CPH))",
+        "contractSubgroup": "(Buying Group (BG))",
+        "origin": "(Meet Competition Form (MCF))"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "nationalGroup": "1000",
+          "subgroup": "996",
+          "region": "999"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "TIER_OSR: OS - DS - FLU - FEE",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "single",
+          "value": "30",
+          "unit": "%  (%)",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": false,
+          "scales": []
+        },
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "single",
+          "value": "400000",
+          "unit": "USD",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "<=  (LE)",
+              "value": "400000",
+              "unit": "USD  (USD)",
+              "outcomeValue": "0.6",
+              "shortfallValue": "%  (%)",
+              "shortfallScale": "10000",
+              "shortfallUnit": "0.2"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2026",
+    "calcPeriodTo": "07/31/2026",
+    "stagingContractNumber": "720",
+    "expected": [
+      {
+        "formula": "TIER_OSR: OS - DS - FLU - FEE",
+        "commitmentMet": "No",
+        "actualValue": "23.72"
+      },
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "No",
+        "actualValue": "150095.57",
+        "penaltyValue": "5.4"
+      }
+    ]
+  }
+}

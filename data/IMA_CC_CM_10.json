@@ -1,0 +1,86 @@
+{
+  "scenario": "IMA_CC_CM_10",
+  "description": "IMA_CC_CM_10",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_10",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_10",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(CPH)",
+        "contractSubgroup": "(BG)",
+        "origin": "(SA)"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "customerNumber": "116820",
+          "nationalGroup": "240",
+          "subgroup": "2775"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "3",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "1",
+              "unit": "%",
+              "outcomeValue": "0.25",
+              "shortfallValue": "0.5",
+              "shortfallScale": "0.25",
+              "shortfallUnit": "%"
+            }
+          ]
+        },
+        {
+          "formulaId": "TIER_OSR : OS SALES-GLP1-DS SALES-FLUE VAC-NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "920",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": false,
+          "scales": []
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2024",
+    "calcPeriodTo": "07/31/2024",
+    "stagingContractNumber": "615",
+    "expected": [
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "Yes",
+        "actualValue": "33872.08"
+      },
+      {
+        "formula": "TIER_OSR : OS SALES-GLP1-DS SALES-FLUE VAC-NET FEES",
+        "commitmentMet": "No",
+        "actualValue": "-176436"
+      }
+    ]
+  }
+}

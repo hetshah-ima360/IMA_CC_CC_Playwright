@@ -1,0 +1,121 @@
+{
+  "scenario": "IMA_CC_CM_17",
+  "description": "IMA_CC_CM_17",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_17",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_17",
+        "startDate": "01/01/2022",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(CPH)",
+        "contractSubgroup": "(BG)",
+        "origin": "(SA)"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "nationalGroup": "0050"
+        },
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "nationalGroup": "0050",
+          "subgroup": "000999",
+          "region": "999",
+          "exclude": true
+        },
+        {
+          "validFrom": "01/01/2022",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "( FLW RX GX SALES - FLW RX GX NET FEES ) * 100 / ( FLW RX SALES - FLW RX FEES )",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "9600",
+          "unit": "%",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "4600",
+              "unit": "%",
+              "outcomeValue": "0.3",
+              "shortfallValue": "200",
+              "shortfallScale": "0.4",
+              "shortfallUnit": "%"
+            }
+          ]
+        },
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "88",
+          "unit": "%",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "50",
+              "unit": "%",
+              "outcomeValue": "0.5",
+              "shortfallValue": "4",
+              "shortfallScale": "0.25",
+              "shortfallUnit": "%"
+            }
+          ]
+        },
+        {
+          "formulaId": "TIER_GCR:GX - DS - BIO - SPC - GLP1 - LEAD - FEE",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "6",
+          "unit": "%",
+          "startDate": "01/01/2022",
+          "endDate": "12/31/2026",
+          "incrementalBasis": false,
+          "scales": []
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2024",
+    "calcPeriodTo": "07/31/2024",
+    "stagingContractNumber": "651",
+    "expected": [
+      {
+        "formula": "( FLW RX GX SALES - FLW RX GX NET FEES ) * 100 / ( FLW RX SALES - FLW RX FEES )"
+      },
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "Yes",
+        "actualValue": "6903134.4"
+      },
+      {
+        "formula": "TIER_GCR:GX - DS - BIO - SPC - GLP1 - LEAD - FEE"
+      }
+    ]
+  }
+}

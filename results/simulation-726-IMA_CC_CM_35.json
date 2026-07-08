@@ -1,0 +1,16 @@
+[
+  {
+    "scenario": "IMA_CC_CM_35",
+    "contractNumber": "726",
+    "description": "IMA_CC_CM_35",
+    "commitmentNumber": "",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "",
+    "actualValue1": "",
+    "commitmentValue1": "",
+    "commitmentMet": "",
+    "status": "NO_RESULT",
+    "runAt": "2026-06-24T14:58:37.493Z"
+  }
+]

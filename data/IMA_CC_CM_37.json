@@ -1,0 +1,69 @@
+{
+  "scenario": "IMA_CC_CM_37",
+  "description": "IMA_CC_CM_37",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_37",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_37",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2024",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(Community Pharmacy (CPH))",
+        "contractSubgroup": "(Buying Group (BG))",
+        "origin": "(Meet Competition Form (MCF))"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2024",
+          "salesOrg": "8000",
+          "customerNumber": "116820",
+          "nationalGroup": "240"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "TIER_GX:GX - DS - FEE",
+          "calcLevel": "Customer",
+          "operator": "GE",
+          "valueType": "single",
+          "value": "500",
+          "unit": "USD",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2024",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "<=  (LE)",
+              "value": "500",
+              "unit": "USD  (USD)",
+              "outcomeValue": "0.1",
+              "shortfallValue": "%  (%)",
+              "shortfallScale": "10",
+              "shortfallUnit": "1"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Customer",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2026",
+    "calcPeriodTo": "07/31/2026",
+    "stagingContractNumber": "710",
+    "expected": [
+      {
+        "formula": "TIER_GX:GX - DS - FEE",
+        "commitmentMet": "No",
+        "actualValue": "14.66",
+        "penaltyValue": "-48.9"
+      }
+    ]
+  }
+}

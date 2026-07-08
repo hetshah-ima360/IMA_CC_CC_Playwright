@@ -1,0 +1,115 @@
+{
+  "scenario": "IMA_CC_CM_03",
+  "description": "IMA_CC_CM_03",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_03",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_03",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(MHS)",
+        "contractSubgroup": "(BG)",
+        "origin": "(SA)"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "customerNumber": "152227",
+          "customerChain": "942",
+          "nationalGroup": "1900",
+          "region": "999"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "TIER_GX:GX - DS - FEE",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "7",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "2",
+              "unit": "%",
+              "outcomeValue": "0.5",
+              "shortfallValue": "1",
+              "shortfallScale": "0.25",
+              "shortfallUnit": "%"
+            }
+          ]
+        },
+        {
+          "formulaId": "TIER_OSR : OS SALES-GLP1-DS SALES-FLUE VAC-NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "40000",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": false,
+          "scales": []
+        },
+        {
+          "formulaId": "TIER_GCR:GX- SPC - GLP1 - DS - FEE",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "Single",
+          "value": "7500",
+          "unit": "%",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": true,
+          "scales": [
+            {
+              "operator": "GE",
+              "value": "2000",
+              "unit": "%",
+              "outcomeValue": "0.7",
+              "shortfallValue": "150",
+              "shortfallScale": "0.8",
+              "shortfallUnit": "%"
+            }
+          ]
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2024",
+    "calcPeriodTo": "07/31/2024",
+    "stagingContractNumber": "596",
+    "expected": [
+      {
+        "formula": "TIER_GX:GX - DS - FEE",
+        "commitmentMet": "Yes",
+        "actualValue": "5407.69"
+      },
+      {
+        "formula": "TIER_OSR : OS SALES-GLP1-DS SALES-FLUE VAC-NET FEES",
+        "commitmentMet": "No",
+        "actualValue": "12065"
+      },
+      {
+        "formula": "TIER_GCR:GX- SPC - GLP1 - DS - FEE",
+        "commitmentMet": "No",
+        "actualValue": "7.89",
+        "penaltyValue": "0.295"
+      }
+    ]
+  }
+}

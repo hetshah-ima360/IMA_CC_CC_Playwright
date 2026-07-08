@@ -1,0 +1,47 @@
+[
+  {
+    "scenario": "IMA_CC_CM_07",
+    "contractNumber": "755",
+    "description": "IMA_CC_CM_07",
+    "commitmentNumber": "IMA_CC_CM_07 (755)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "( FLW RX GX SALES - FLW RX GX NET FEES ) * 100 / ( FLW RX SALES - FLW RX FEES )",
+    "actualValue1": "-232.70",
+    "commitmentValue1": "5,000.00",
+    "commitmentMet": "No",
+    "penaltyValue": "",
+    "status": "OK",
+    "runAt": "2026-06-25T14:54:43.241Z"
+  },
+  {
+    "scenario": "IMA_CC_CM_07",
+    "contractNumber": "755",
+    "description": "IMA_CC_CM_07",
+    "commitmentNumber": "IMA_CC_CM_07 (755)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "NET SALES - MPB - NET FEES",
+    "actualValue1": "0.00",
+    "commitmentValue1": "7,500.00",
+    "commitmentMet": "No",
+    "penaltyValue": "",
+    "status": "OK",
+    "runAt": "2026-06-25T14:54:43.241Z"
+  },
+  {
+    "scenario": "IMA_CC_CM_07",
+    "contractNumber": "755",
+    "description": "IMA_CC_CM_07",
+    "commitmentNumber": "IMA_CC_CM_07 (755)",
+    "calcStartDate": "07/01/2024",
+    "calcEndDate": "07/31/2024",
+    "formula1": "TIER_GX:GX - DS - FEE",
+    "actualValue1": "879.87",
+    "commitmentValue1": "5,600.00",
+    "commitmentMet": "No",
+    "penaltyValue": "2.9",
+    "status": "OK",
+    "runAt": "2026-06-25T14:54:43.241Z"
+  }
+]

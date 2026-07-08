@@ -1,0 +1,75 @@
+{
+  "scenario": "IMA_CC_CM_30",
+  "description": "IMA_CC_CM_30",
+  "contracts": [
+    {
+      "description": "IMA_CC_CM_30",
+      "header": {
+        "commitmentType": "Standard Commitment - 01 (IMA_CC_CM_01)",
+        "description": "IMA_CC_CM_30",
+        "startDate": "01/01/2024",
+        "endDate": "12/31/2026",
+        "sourceData": "Direct - Sales Data (Direct - Sales Data)",
+        "calculationFrequency": "01 (Monthly)",
+        "group": "(Community Pharmacy (CPH))",
+        "contractSubgroup": "(Buying Group (BG))",
+        "origin": "(Supply Agreement (SA))"
+      },
+      "rows": [],
+      "eligibility": [
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "customerNumber": "81523"
+        },
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8000",
+          "customerNumber": "124538"
+        },
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "customerNumber": "152227"
+        },
+        {
+          "validFrom": "01/01/2024",
+          "validTo": "12/31/2026",
+          "salesOrg": "8545",
+          "customerNumber": "310192"
+        }
+      ],
+      "calculation": [
+        {
+          "formulaId": "NET SALES - NET FEES",
+          "calcLevel": "Contract",
+          "operator": "GE",
+          "valueType": "single",
+          "value": "300000",
+          "unit": "USD",
+          "startDate": "01/01/2024",
+          "endDate": "12/31/2026",
+          "incrementalBasis": false,
+          "scales": []
+        }
+      ],
+      "calcLevel": "Contract",
+      "approvalStatus": "New"
+    }
+  ],
+  "simulation": {
+    "calcPeriodFrom": "07/01/2026",
+    "calcPeriodTo": "07/31/2026",
+    "stagingContractNumber": "715",
+    "expected": [
+      {
+        "formula": "NET SALES - NET FEES",
+        "commitmentMet": "Yes",
+        "actualValue": "344249.37"
+      }
+    ]
+  }
+}

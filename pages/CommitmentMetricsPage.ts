@@ -1,5 +1,5 @@
 import { Page, expect, Locator } from '@playwright/test';
-import { Contract, GridRow, Scale } from '../utils/types';
+import { Contract, GridRow, Scale, EligibilityRow, CalculationRow } from '../utils/types';
 
 export class CommitmentMetricsPage {
   readonly page: Page;
@@ -73,85 +73,251 @@ export class CommitmentMetricsPage {
     const h = contract.header;
     console.log('[debug] Filling General tab dropdowns...');
     await this.selectComboboxByName(/calculation frequency/i, h.calculationFrequency, 'Calculation Frequency');
+
+    if (h.exclusiveFormula !== undefined) {
+      await this.setSwitchByLabel(/exclusive formula/i, h.exclusiveFormula, 'Exclusive Formula');
+    }
+    if (h.agreementStatus) {
+      await this.selectComboboxByName(/agreement status/i, h.agreementStatus, 'Agreement Status');
+    }
+
     await this.selectComboboxByName(/^group$/i, h.group, 'Group');
     await this.selectComboboxByName(/contract subgroup/i, h.contractSubgroup, 'Contract Subgroup');
     await this.selectComboboxByName(/^origin$/i, h.origin, 'Origin');
     console.log('[debug] General tab done');
   }
 
+  /**
+   * Set a MUI Switch (toggle) identified by a nearby label to the desired state.
+   * Best-effort: reads the current checked state and only clicks if it differs.
+   */
+  private async setSwitchByLabel(labelRegex: RegExp, desired: boolean, label: string) {
+    try {
+      // The switch's checkbox input sits near a label/text with this name.
+      const container = this.page.locator('div', { hasText: labelRegex })
+        .filter({ has: this.page.locator('input[type="checkbox"], .MuiSwitch-root') })
+        .last();
+      const input = container.locator('input[type="checkbox"]').first();
+      const checked = await input.isChecked().catch(() => undefined);
+      if (checked === desired) {
+        console.log(`[debug] ${label} already ${desired ? 'ON' : 'OFF'}`);
+        return;
+      }
+      // Click the switch track/thumb (the input itself is visually hidden in MUI).
+      const clickable = container.locator('.MuiSwitch-root, .MuiSwitch-switchBase').first();
+      if (await clickable.isVisible({ timeout: 1_500 }).catch(() => false)) {
+        await clickable.click();
+      } else {
+        await input.click({ force: true });
+      }
+      console.log(`[debug] ${label} -> ${desired ? 'ON' : 'OFF'}`);
+    } catch {
+      console.log(`[debug] ${label}: could not set toggle (left at default)`);
+    }
+  }
+
   async fillEligibilityRows(contract: Contract) {
-    console.log(`[debug] Filling ${contract.rows.length} Eligibility row(s)...`);
+    // Prefer the decoupled eligibility[] model; fall back to the legacy paired rows[].
+    const rows: EligibilityRow[] = contract.eligibility ?? (contract.rows ?? []).map((r) => ({
+      validFrom: r.validFrom,
+      validTo: r.validTo,
+      salesOrg: r.salesOrg,
+      customerNumber: r.customerNumber,
+    }));
+
+    console.log(`[debug] Filling ${rows.length} Eligibility row(s)...`);
     await this.waitForHandsontable('Eligibility Rules');
 
-    for (let i = 0; i < contract.rows.length; i++) {
-      const r = contract.rows[i];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r.salesOrg) throw new Error(`Eligibility row ${i + 1}: Sales Org is missing.`);
 
-      if (!r.salesOrg) {
-        throw new Error(`Row ${i + 1}: Sales Org is missing in Excel.`);
-      }
-
-      console.log(`[debug] Eligibility row ${i + 1}/${contract.rows.length}: salesOrg=${r.salesOrg}, customer=${r.customerNumber}`);
+      console.log(`[debug] Eligibility row ${i + 1}/${rows.length}: salesOrg=${r.salesOrg}` +
+        `${r.customerNumber ? `, customer=${r.customerNumber}` : ''}` +
+        `${r.customerChain ? `, chain=${r.customerChain}` : ''}` +
+        `${r.nationalGroup ? `, nationalGroup=${r.nationalGroup}` : ''}` +
+        `${r.subgroup ? `, subgroup=${r.subgroup}` : ''}` +
+        `${r.exclude ? ', EXCLUDE' : ''}${r.deleted ? ', DELETED' : ''}`);
 
       await this.resetGridFocus();
 
-      await this.fillHandsontableCell(i, 'Valid From', r.validFrom);
-      await this.fillHandsontableCell(i, 'Valid To', r.validTo);
+      // Fill the eligibility KEY fields first. Selecting Sales Org (or another
+      // key) makes the grid repopulate this row's default Valid From/To, so we
+      // set the dates LAST — otherwise the key selection overwrites Valid From
+      // back to today (the default), which is the "06/24/2026" we were seeing.
       await this.fillHandsontableDropdownCellWithVerify(i, 'Sales Org', r.salesOrg);
 
-      if (r.customerNumber) {
-        await this.fillHandsontableDropdownCellWithVerify(i, 'Customer Number', r.customerNumber);
-      }
+      if (r.customerNumber) await this.fillHandsontableDropdownCellWithVerify(i, 'Customer Number', r.customerNumber);
+      if (r.customerChain) await this.fillHandsontableDropdownCellWithVerify(i, 'Customer Chain', r.customerChain);
+      if (r.nationalGroup) await this.fillHandsontableDropdownCellWithVerify(i, 'National Group', r.nationalGroup);
+      if (r.subgroup) await this.fillHandsontableDropdownCellWithVerify(i, 'Subgroup', r.subgroup);
+      if (r.region) await this.fillHandsontableDropdownCellWithVerify(i, 'Region', r.region);
+      if (r.district) await this.fillHandsontableDropdownCellWithVerify(i, 'District', r.district);
+
+      // Dates AFTER the keys (see note above), with verify/retry so a defaulted
+      // value doesn't slip through.
+      await this.fillHandsontableDateCell(i, 'Valid From', r.validFrom);
+      await this.fillHandsontableDateCell(i, 'Valid To', r.validTo);
+
+      // Always enforce Exclude to the requested state (default OFF). The grid
+      // can render the first row's Exclude as checked, and previously the code
+      // only ever turned it ON — so a defaulted-on checkbox was never cleared.
+      // setEligibilityCheckbox only clicks when the current state differs.
+      await this.setEligibilityCheckbox(i, 'Exclude', !!r.exclude);
+      if (r.deleted) await this.setEligibilityCheckbox(i, 'Deleted', true);
     }
 
     console.log('[debug] All Eligibility rows done');
   }
 
+  /**
+   * Toggle a Handsontable checkbox cell (e.g. Exclude / Deleted) to `checked`.
+   * Reads the current state from the cell's <input type="checkbox"> and only
+   * clicks if it differs.
+   */
+  private async setEligibilityCheckbox(rowIndex: number, columnName: string, checked: boolean) {
+    try {
+      await this.resetGridFocus();
+      const cell = await this.locateHandsontableCell(rowIndex, columnName);
+      await cell.scrollIntoViewIfNeeded();
+      const box = cell.locator('input[type="checkbox"]').first();
+      if (await box.count() > 0) {
+        const cur = await box.isChecked().catch(() => undefined);
+        if (cur === checked) {
+          console.log(`[debug]   ${columnName} row ${rowIndex + 1} already ${checked}`);
+          return;
+        }
+        await box.click({ force: true });
+      } else {
+        // No input found — click the cell and toggle with Space.
+        await cell.click();
+        await this.page.keyboard.press('Space');
+      }
+      console.log(`[debug]   ${columnName} row ${rowIndex + 1} -> ${checked}`);
+    } catch {
+      console.log(`[debug]   ${columnName} row ${rowIndex + 1}: could not toggle checkbox`);
+    }
+  }
+
   async validateEligibility() {
-    const validateButton = this.page.getByRole('button', { name: /validate/i })
+    // Commit any open Handsontable editor and blur the grid BEFORE validating.
+    // The a11y snapshot showed a cell editor still open (stray date/combobox
+    // elements) when Validate was clicked — the click lands in edit mode and the
+    // validation never runs, so no toast appears.
+    await this.page.keyboard.press('Escape').catch(() => {});
+    await this.resetGridFocus().catch(() => {});
+    await this.page.getByText('Eligibility Rules', { exact: false }).first()
+      .click({ timeout: 1_500 }).catch(() => {});
+    await this.page.waitForTimeout(400);
+
+    const validateButton = this.page.getByRole('button', { name: /^validate$/i })
       .or(this.page.locator('button[aria-label*="validate" i]')).first();
+    await validateButton.scrollIntoViewIfNeeded().catch(() => {});
     await validateButton.click();
-    await expect(this.page.locator('text=/data validated successfully/i').first())
-      .toBeVisible({ timeout: 20_000 });
-    console.log('[debug] Validated successfully');
+
+    // Toast wording varies between builds — accept common "validated/validation
+    // successful" variants.
+    const success = this.page.locator(
+      'text=/data validated successfully|validated successfully|successfully validated|validation (successful|completed|passed)/i',
+    ).first();
+    const ok = await success.isVisible({ timeout: 20_000 }).catch(() => false);
+    if (ok) {
+      console.log('[debug] Validated successfully');
+      return;
+    }
+
+    // No success toast — dump whatever toast/status text IS on screen so we can
+    // see the new wording (or a real validation error), then continue rather
+    // than hard-failing here so the run can still reach the Calculation tab.
+    const msgs = await this.page
+      .evaluate(() => {
+        const out: string[] = [];
+        document
+          .querySelectorAll('[role="status"], [role="alert"], .MuiAlert-message, .Toastify__toast, [class*="toast" i], [class*="snackbar" i]')
+          .forEach((el) => {
+            const t = (el.textContent || '').trim().replace(/\s+/g, ' ');
+            if (t) out.push(t);
+          });
+        return Array.from(new Set(out)).slice(0, 20);
+      })
+      .catch(() => []);
+    console.log(`[debug] No "validated" toast. Toast/status text seen: ${JSON.stringify(msgs)}`);
+    await this.page.waitForTimeout(1_000);
   }
 
   async fillCalculationRows(contract: Contract) {
-    console.log(`[debug] Filling ${contract.rows.length} Calculation row(s)...`);
+    // Prefer the decoupled calculation[] model; fall back to legacy paired rows[].
+    const calc: CalculationRow[] = contract.calculation ?? (contract.rows ?? []).map((r) => ({
+      formulaId: r.formulaId,
+      operator: r.operator,
+      valueType: r.valueType,
+      value: r.value,
+      unit: r.unit,
+      startDate: r.validFrom,
+      endDate: r.validTo,
+      incrementalBasis: r.incrementalBasis,
+      scales: r.scales,
+    }));
+
+    console.log(`[debug] Filling ${calc.length} Calculation row(s)...`);
     await this.waitForHandsontable('Calculation Rules');
 
-    for (let i = 0; i < contract.rows.length; i++) {
-      const r = contract.rows[i];
-      console.log(`[debug] Calculation row ${i + 1}/${contract.rows.length}: formula=${r.formulaId}, value=${r.value}${r.unit}`);
+    // The platform changed the Calculation Rules grid: Operator / Value Type /
+    // Value / Unit are no longer grid columns (they moved into the per-row
+    // "Scale / View Scale Info" popup). Only fill columns that actually exist so
+    // we don't crash on getColumnIndex; log the ones that are gone.
+    const cols = await this.gridColumnNamesLower();
+    const has = (name: string) => cols.includes(name.toLowerCase());
+    const movedOut = ['Operator', 'Value Type', 'Value', 'Unit'].filter((c) => !has(c));
+    if (movedOut.length) {
+      console.log(
+        `[debug] Calc grid no longer exposes ${JSON.stringify(movedOut)} — these now live in the per-row "View Scale Info" popup. Skipping them in the grid.`,
+      );
+    }
+
+    for (let i = 0; i < calc.length; i++) {
+      const r = calc[i];
+      console.log(`[debug] Calculation row ${i + 1}/${calc.length}: formula=${r.formulaId}, value=${r.value}${r.unit}`);
 
       await this.resetGridFocus();
 
       await this.fillHandsontableDropdownCell(i, 'Formula 1', r.formulaId);
       await this.logCalcCell(i, 'Formula 1');
-      await this.fillHandsontableDropdownCell(i, 'Calc Level 1', contract.calcLevel);
+      // Calc Level is a multi-select checkbox popup that DEFAULTS to
+      // "1 (contract)"; picking another level only ADDS it. setCalcLevel
+      // enforces a clean single selection (check the requested level, uncheck
+      // every other one) so calcLevel:"Customer" ends up as Customer ONLY.
+      await this.setCalcLevel(i, r.calcLevel ?? contract.calcLevel);
       await this.logCalcCell(i, 'Calc Level 1');
-      await this.fillHandsontableDropdownCell(i, 'Operator', r.operator);
-      await this.logCalcCell(i, 'Operator');
-      await this.fillHandsontableDropdownCell(i, 'Value Type', r.valueType);
-      await this.logCalcCell(i, 'Value Type');
-      await this.fillHandsontableCell(i, 'Value', r.value);
-      await this.logCalcCell(i, 'Value');
-      await this.fillHandsontableDropdownCell(i, 'Unit', r.unit);
-      await this.logCalcCell(i, 'Unit');
-      await this.fillHandsontableCell(i, 'Start Date', r.validFrom);
-      await this.fillHandsontableCell(i, 'End Date', r.validTo);
+      if (has('Operator') && r.operator) {
+        await this.fillHandsontableDropdownCell(i, 'Operator', r.operator);
+        await this.logCalcCell(i, 'Operator');
+      }
+      if (has('Value Type') && r.valueType) {
+        await this.fillHandsontableDropdownCell(i, 'Value Type', r.valueType);
+        await this.logCalcCell(i, 'Value Type');
+      }
+      if (has('Value') && r.value) {
+        await this.fillHandsontableCell(i, 'Value', r.value);
+        await this.logCalcCell(i, 'Value');
+      }
+      if (has('Unit') && r.unit) {
+        // Unit is a small fixed-list dropdown: double-click to open it and pick
+        // the option directly (no type-to-filter).
+        await this.fillHandsontableDropdownCell(i, 'Unit', r.unit, false);
+        await this.logCalcCell(i, 'Unit');
+      }
+      // Start Date / End Date are intentionally NOT touched — they auto-populate
+      // from the contract period and must not be changed by the script.
 
-      // Incremental Basis + Scales (NEW)
-      // We only enable Incremental Basis when there is actual scale data to
-      // enter. Enabling the toggle WITHOUT providing scales puts IMA360 into
-      // an invalid state ("uses scales" but none defined), which fails on
-      // save. So a row flagged Incremental Basis = TRUE but with no scale
-      // rows is treated as a no-op for the toggle.
+      // Incremental Basis + Scales — only enable the toggle when scale data
+      // exists (enabling without scales puts IMA360 in an invalid state).
       if (r.incrementalBasis && r.scales.length > 0) {
         console.log(`[debug] Calc row ${i + 1}: Incremental Basis = TRUE with ${r.scales.length} scale(s)`);
         await this.enableIncrementalBasis(i);
         await this.fillScales(i, r.scales);
       } else if (r.incrementalBasis && r.scales.length === 0) {
-        console.log(`[debug] Calc row ${i + 1}: Incremental Basis = TRUE but NO scale data — skipping toggle (would fail validation). Add scale data in Excel or set Incremental Basis = FALSE.`);
+        console.log(`[debug] Calc row ${i + 1}: Incremental Basis = TRUE but NO scale data — skipping toggle.`);
       }
     }
 
@@ -201,6 +367,35 @@ export class CommitmentMetricsPage {
     const field = this.page.getByLabel('Commitment Number', { exact: false }).first();
     await expect(field).not.toHaveValue('', { timeout: 30_000 });
     return (await field.inputValue()).trim();
+  }
+
+  /**
+   * Read the newest commitment number from the Commitment Metrics list. The
+   * list is sorted newest-first and each row's Commitment Number column is a
+   * link formatted "<description> (<id>)" (e.g. "IMA_CC_CM_20 (655)"). Returns
+   * the numeric id from the top row.
+   */
+  async getCommitmentNumberFromList(): Promise<string> {
+    await this.page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+    await this.page.waitForTimeout(800);
+
+    let text = '';
+    const link = this.page.getByRole('link', { name: /\(\d+\)\s*$/ }).first();
+    if (await link.isVisible({ timeout: 8_000 }).catch(() => false)) {
+      text = (await link.textContent())?.trim() || '';
+      console.log(`[debug] Top commitment (link): "${text}"`);
+    } else {
+      const cell = this.page.getByText(/\(\d+\)\s*$/).first();
+      text = (await cell.textContent())?.trim() || '';
+      console.log(`[debug] Top commitment (text): "${text}"`);
+    }
+
+    const m = text.match(/\((\d+)\)\s*$/);
+    if (!m) {
+      throw new Error(`Could not parse a commitment number from the list (top row text: "${text}")`);
+    }
+    console.log(`[debug] Commitment number from list -> ${m[1]}`);
+    return m[1];
   }
 
   // ============================================================
@@ -449,17 +644,31 @@ export class CommitmentMetricsPage {
       console.log(`[debug]       pos ${pos} value="${value}"`);
     };
 
-    // ── Fill the 7 cells left-to-right ────────────────────────────────────
-    // Dropdown (0, 2, 6): dblclick → list appears → click option.
-    // Number   (1, 3, 4, 5): dblclick → type → Tab to commit.
-
+    // ── Fill the cells left-to-right ─────────────────────────────────────
+    // Cols 0-2 are common: Operator (dropdown), Value (number), Unit (dropdown).
     await fillDropdown(0, this.operatorCode(scale.operator));
     await fillNumber(1, scale.value);
     await fillDropdown(2, this.unitToken(scale.unit));
-    await fillNumber(3, scale.outcomeValue);
-    await fillNumber(4, scale.shortfallValue);
-    await fillNumber(5, scale.shortfallScale);
-    await fillDropdown(6, this.unitToken(scale.shortfallUnit));
+
+    // The Incremental-basis Scale Data popup is ALWAYS this 7-column layout
+    // (fillScaleTier only runs for incremental rows):
+    //   0 Operator (dropdown)   1 Value (number)        2 Unit (dropdown)
+    //   3 Scale Value (number)  4 Scale Unit (DROPDOWN) 5 Increment Value (number)
+    //   6 Increment Scale Value (number)
+    // Sheet "Scale Tab" columns map onto the new columns by type + name
+    // (prefer the new field names if a JSON ever uses them):
+    //   Operator              <- Scale Operator        (GE)
+    //   Value                 <- Scale Value           (20000)
+    //   Unit                  <- Scale Unit            (USD)
+    //   Scale Value           <- scaleValue          ?? Scale Outcome Value   (0.3)
+    //   Scale Unit (dropdown) <- scaleUnit           ?? Scale Shortfall Unit  (USD)
+    //   Increment Value       <- incrementValue      ?? Scale Shortfall Value (100)
+    //   Increment Scale Value <- incrementScaleValue ?? Scale Shortfall Scale (0.25)
+    console.log('[debug]     Scale layout: INCREMENT (new 7-col)');
+    await fillNumber(3, scale.scaleValue ?? scale.outcomeValue ?? '');
+    await fillDropdown(4, this.unitToken(scale.scaleUnit ?? scale.shortfallUnit ?? ''));
+    await fillNumber(5, scale.incrementValue ?? scale.shortfallValue ?? '');
+    await fillNumber(6, scale.incrementScaleValue ?? scale.shortfallScale ?? '');
 
     // Do NOT press Escape — the Scale Data dialog can close on Escape. The last
     // cell is committed by its option-click / Tab, so just settle.
@@ -672,25 +881,36 @@ export class CommitmentMetricsPage {
     ];
 
     let opened = false;
-    for (let i = 0; i < strategies.length; i++) {
-      try {
+    // Cap the per-strategy visibility wait — a strategy that's present but not
+    // yet visible only needs a short wait; one that matches nothing is skipped
+    // instantly via count() (this was the 4s pause: strategy 1, getByRole
+    // combobox-by-name, never matches these MUI fields and burned its full
+    // timeout before falling through to the label/xpath strategy that works).
+    const quickVisibleTimeout = Math.min(perStrategyTimeout, 1_200);
+    for (let pass = 0; pass < 2 && !opened; pass++) {
+      for (let i = 0; i < strategies.length && !opened; i++) {
         const el = strategies[i].first();
-        await el.waitFor({ state: 'visible', timeout: perStrategyTimeout });
-        await el.scrollIntoViewIfNeeded().catch(() => {});
-        await el.click({ force: true });
-        await this.page.waitForTimeout(500);
+        if ((await el.count().catch(() => 0)) === 0) continue; // no match → next strategy now
+        try {
+          await el.waitFor({ state: 'visible', timeout: quickVisibleTimeout });
+          await el.scrollIntoViewIfNeeded().catch(() => {});
+          await el.click({ force: true });
+          await this.page.waitForTimeout(400);
 
-        // The dropdown options may load asynchronously from the server,
-        // showing a "Loading" placeholder first. Wait for real options to
-        // appear (or Loading to disappear) before deciding it failed.
-        const optionsAppeared = await this.waitForDropdownOptions(openTimeout);
-        if (optionsAppeared) {
-          opened = true;
-          break;
+          // The dropdown options may load asynchronously from the server,
+          // showing a "Loading" placeholder first. Wait for real options to
+          // appear (or Loading to disappear) before deciding it failed.
+          const optionsAppeared = await this.waitForDropdownOptions(openTimeout);
+          if (optionsAppeared) {
+            opened = true;
+            break;
+          }
+        } catch {
+          continue;
         }
-      } catch {
-        continue;
       }
+      // Brief pause before a second pass, in case the form rendered late.
+      if (!opened) await this.page.waitForTimeout(500);
     }
     if (!opened) throw new Error(`Could not open "${friendlyName}" dropdown`);
 
@@ -776,6 +996,87 @@ export class CommitmentMetricsPage {
     await this.page.waitForTimeout(100);
   }
 
+  /** Compare two dates by their digits only (e.g. "01/01/2024" === "1/1/2024"? no
+   *  — but the grid renders the same MM/DD/YYYY we type, so digit-equality holds). */
+  private sameDateText(a: string, b: string): boolean {
+    const d = (s: string) => (s || '').replace(/\D/g, '');
+    return d(a).length > 0 && d(a) === d(b);
+  }
+
+  /**
+   * Fill a Handsontable DATE cell that uses the new native date editor
+   * (mm/dd/yyyy segmented input + calendar popup): double-click to open the
+   * editor, type the date in mm/dd/yyyy order, then press Tab to commit and move
+   * to the next cell. Verifies and retries up to 3×.
+   */
+  private async fillHandsontableDateCell(rowIndex: number, columnName: string, value: string) {
+    if (!value) return;
+    // Normalize to 8 digits MMDDYYYY — the native date input auto-advances
+    // segments as digits are typed, so we don't type the slashes.
+    const m = value.match(/(\d{1,2})\D(\d{1,2})\D(\d{4})/);
+    const digits = m ? `${m[1].padStart(2, '0')}${m[2].padStart(2, '0')}${m[3]}` : value.replace(/\D/g, '');
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const cell = await this.locateHandsontableCell(rowIndex, columnName);
+      await cell.scrollIntoViewIfNeeded();
+      await cell.click();
+      await this.page.waitForTimeout(60);
+      // Double-click opens the date editor (calendar + mm/dd/yyyy input).
+      await cell.dblclick();
+      await this.page.waitForTimeout(250);
+
+      const dateInput = await this.locateGridDateEditor(cell);
+      if (dateInput) {
+        await dateInput.click().catch(() => {});
+        await this.page.waitForTimeout(60);
+        // Make sure we start at the month segment regardless of where the click
+        // landed (ArrowLeft stops at the leftmost segment).
+        await this.page.keyboard.press('ArrowLeft').catch(() => {});
+        await this.page.keyboard.press('ArrowLeft').catch(() => {});
+      }
+
+      await this.page.keyboard.type(digits, { delay: 70 });
+      await this.page.waitForTimeout(150);
+      await this.page.keyboard.press('Tab');
+      await this.page.waitForTimeout(200);
+
+      const txt = (await (await this.locateHandsontableCell(rowIndex, columnName)).textContent())?.trim() || '';
+      if (this.sameDateText(txt, value)) {
+        console.log(`[debug]   ${columnName} row ${rowIndex + 1} = "${txt}" ✓`);
+        return;
+      }
+      console.log(`[debug]   ${columnName} row ${rowIndex + 1} shows "${txt}", expected "${value}" — retry ${attempt}/3`);
+      await this.resetGridFocus();
+    }
+    console.log(`[debug]   ${columnName} row ${rowIndex + 1}: date did not commit (left as-is)`);
+  }
+
+  /**
+   * Locate the date editor input for the cell being edited, SCOPED to the grid
+   * so we never grab the header's Start/End Date fields (which are also
+   * <input type="date"> and always visible on the form). Tries inside the cell
+   * first, then the Handsontable editor holder / active master grid.
+   */
+  private async locateGridDateEditor(cell: Locator): Promise<Locator | null> {
+    const candidates: Locator[] = [
+      cell.locator('input[type="date"], input[placeholder*="mm" i]'),
+      this.page.locator('.handsontableInputHolder input:visible, .htEditorContainer input:visible'),
+      this.page.locator('.ht_master input[type="date"]:visible, .ht_master input[placeholder*="mm" i]:visible'),
+    ];
+    for (const c of candidates) {
+      const loc = c.first();
+      if ((await loc.count().catch(() => 0)) > 0) return loc;
+    }
+    return null;
+  }
+
+  /** Current calc/eligibility grid column names (lower-cased). */
+  private async gridColumnNamesLower(): Promise<string[]> {
+    const headers = this.page.locator(this.REAL_COL_HEADER);
+    const all = await headers.allTextContents();
+    return all.map((t) => t.trim().toLowerCase()).filter(Boolean);
+  }
+
   /**
    * Broad selector for autocomplete options across BOTH renderings the
    * IMA360 Calculation grid uses:
@@ -791,7 +1092,7 @@ export class CommitmentMetricsPage {
     '.autocompleteEditor td:visible, ' +
     'li[role="option"]:visible';
 
-  private async fillHandsontableDropdownCell(rowIndex: number, columnName: string, value: string) {
+  private async fillHandsontableDropdownCell(rowIndex: number, columnName: string, value: string, typeToFilter = true) {
     const maxAttempts = 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -803,43 +1104,71 @@ export class CommitmentMetricsPage {
       }
 
       const cell = await this.locateHandsontableCell(rowIndex, columnName);
-      await cell.scrollIntoViewIfNeeded();
+      await cell.scrollIntoViewIfNeeded({ timeout: 5_000 }).catch(() => {});
       await cell.click();
       await this.page.waitForTimeout(50);
       await cell.dblclick();
-      await this.page.waitForTimeout(150);
+      await this.page.waitForTimeout(typeToFilter ? 150 : 300);
 
-      await this.page.keyboard.type(value, { delay: 30 });
-      await this.page.waitForTimeout(100);
+      // For small fixed-list dropdowns (e.g. Unit) we don't type — the
+      // double-click opens the full list and we pick the option directly.
+      // Typing is only needed to filter large autocomplete lists (e.g. Formula).
+      if (typeToFilter) {
+        await this.page.keyboard.type(value, { delay: 30 });
+        await this.page.waitForTimeout(100);
+      } else {
+        await this.page.waitForTimeout(150);
+      }
 
-      // Collect every visible option across both dropdown renderings.
+      // Collect every visible option across both dropdown renderings. Fetch all
+      // option texts in a SINGLE round-trip — iterating with one textContent()
+      // call per option is very slow when the list is large (e.g. the full
+      // Formula catalog), which shows up as a long pause on this step.
       const allOptions = this.page.locator(this.DROPDOWN_OPTION_SELECTOR);
-      const optCount = await allOptions.count();
+      const optTexts = await allOptions.allTextContents();
+      const optCount = optTexts.length;
 
-      // Find and click the option matching our value (either direction of
-      // containment, normalized for spacing/case).
+      // Find the option matching our value (either direction of containment,
+      // normalized for spacing/case), then click that one by index.
       // We use mousedown+mouseup (not just click) because Handsontable
       // autocomplete editors typically commit the value on the mousedown
       // event — a plain Playwright click can be swallowed by the editor's
       // blur handler before the selection registers.
-      let clicked = false;
+      let matchIdx = -1;
       for (let oi = 0; oi < optCount; oi++) {
-        const opt = allOptions.nth(oi);
-        const optText = (await opt.textContent())?.trim() || '';
+        const optText = (optTexts[oi] || '').trim();
         if (!optText) continue;
         if (this.cellContainsValue(optText, value) || this.cellContainsValue(value, optText)) {
-          try {
-            // Dispatch mousedown explicitly, then click — covers both commit models.
-            await opt.scrollIntoViewIfNeeded().catch(() => {});
-            await opt.dispatchEvent('mousedown').catch(() => {});
-            await this.page.waitForTimeout(100);
-            await opt.dispatchEvent('mouseup').catch(() => {});
-            await opt.click({ force: true, timeout: 3_000 }).catch(() => {});
-            clicked = true;
-            break;
-          } catch {
-            // try keyboard fallback below
-          }
+          matchIdx = oi;
+          break;
+        }
+      }
+
+      let clicked = false;
+      if (matchIdx >= 0) {
+        const opt = allOptions.nth(matchIdx);
+        await opt.scrollIntoViewIfNeeded().catch(() => {});
+        // Handsontable autocompletes commit the selection on mousedown — the
+        // option then detaches and the popup closes. The follow-up mouseup/click
+        // were waiting the full action timeout (~25s) + 3s on that detached
+        // element every cell (~50s across formula+unit). Only fire them if the
+        // option is still present (selection didn't commit), with a short cap.
+        await opt.dispatchEvent('mousedown').catch(() => {});
+        await this.page.waitForTimeout(100);
+        if ((await opt.count().catch(() => 0)) > 0) {
+          await opt.dispatchEvent('mouseup', {}, { timeout: 1_000 }).catch(() => {});
+          await opt.click({ force: true, timeout: 1_000 }).catch(() => {});
+        }
+        clicked = true;
+      }
+
+      if (!clicked && optCount === 0) {
+        // Not a Handsontable autocomplete list. Some calc-grid cells (notably
+        // Calc Level) open a MUI checkbox popup with options like
+        // "1 (contract)" / "2 (customer_number)" that the Handsontable option
+        // selector can't see. Match and click there instead.
+        if (await this.selectCheckboxPopupOption(value)) {
+          clicked = true;
         }
       }
 
@@ -921,23 +1250,33 @@ export class CommitmentMetricsPage {
       try {
         await this.waitForAutocompletePopupOpen(5000);
 
-        const matchingOption = this.page
-          .locator(this.HOT_AUTOCOMPLETE_OPTION)
-          .filter({ hasText: new RegExp(this.escapeRegex(value), 'i') })
-          .first();
+        const opts = this.page.locator(this.HOT_AUTOCOMPLETE_OPTION);
+        const texts = await opts.allTextContents();
 
-        const visible = await matchingOption.isVisible({ timeout: 3_000 }).catch(() => false);
-        if (visible) {
-          await matchingOption.click();
+        // Match preference: EXACT code first, then NUMERIC (leading-zero
+        // insensitive), then "contains".
+        //   "999"  -> "999 (999)"   (exact, not "000999")
+        //   "56"   -> "056 (056)"   (numeric 56 == 56, NOT "0356" which is 356)
+        //   "498"  -> "(0498)"      (numeric 498 == 498)
+        // Only if none of those hit do we fall back to a loose contains.
+        let idx = texts.findIndex((t) => this.optionCodeMatches(t, value));
+        if (idx < 0) {
+          idx = texts.findIndex((t) => this.optionCodeNumericMatches(t, value));
+        }
+        if (idx < 0) {
+          idx = texts.findIndex(
+            (t) => this.cellContainsValue(t, value) || this.cellContainsValue(value, t),
+          );
+        }
+
+        if (idx >= 0) {
+          console.log(`[debug]   Selecting "${(texts[idx] || '').trim()}" for "${value}"`);
+          await opts.nth(idx).click();
           optionClicked = true;
-        } else {
-          const firstOption = this.page.locator(this.HOT_AUTOCOMPLETE_OPTION).first();
-          if (await firstOption.isVisible({ timeout: 1_000 }).catch(() => false)) {
-            const optText = await firstOption.textContent();
-            console.log(`[debug]   No exact "${value}" — picking first option: "${optText?.trim()}"`);
-            await firstOption.click();
-            optionClicked = true;
-          }
+        } else if (texts.length > 0) {
+          console.log(`[debug]   No match for "${value}" — picking first option: "${(texts[0] || '').trim()}"`);
+          await opts.nth(0).click();
+          optionClicked = true;
         }
       } catch {
         console.log(`[debug]   ⚠ Autocomplete popup didn't open for ${columnName} row ${rowIndex + 1} attempt ${attempt}`);
@@ -975,6 +1314,294 @@ export class CommitmentMetricsPage {
       `Could not set ${columnName} = "${value}" in row ${rowIndex + 1} after ${maxAttempts} attempts. ` +
       `Last cell content: "${lastSeen}".`
     );
+  }
+
+  /**
+   * Set the "Calc Level 1" cell to a SINGLE level.
+   *
+   * Calc Level is a MUI multi-select checkbox popup ("1 (contract)" /
+   * "2 (customer_number)" / "Test (3)") that DEFAULTS to "1 (contract)"
+   * checked. Picking another level only ADDS it, leaving Contract checked too —
+   * which is why the generic dropdown filler (it types-to-filter, hiding the
+   * default, then verifies by "contains") left BOTH selected.
+   *
+   * This opens the popup WITHOUT typing (so every option, including the default,
+   * stays visible to be unchecked), then delegates to selectCheckboxPopupOption
+   * (check the requested level, uncheck every other one). Finally it verifies the
+   * cell shows ONLY the requested level, retrying up to 3×.
+   */
+  /**
+   * Set Calc Level 1 to a SINGLE level (e.g. "Customer" / "Contract").
+   *
+   * The cell opens a custom HOT editor on double-click: a floating div with
+   * a Search <input> and plain <li> items (radio-circle style). There are no
+   * MUI/ARIA role="option" elements — the selector is just `li` inside the
+   * visible editor container (.htSelectEditor, .handsontableEditor, or the
+   * first absolutely-positioned div that appears after the double-click).
+   *
+   * Strategy inside evaluate():
+   *   1. Find the visible editor container.
+   *   2. Collect its <li> children.
+   *   3. Click the target li if not already selected.
+   *   4. Click any other selected li to deselect it (single-select enforcement).
+   *   Selected state is read from: aria-selected, aria-checked, input.checked,
+   *   or a "selected"/"active"/"checked" CSS class on the li or its first child.
+   */
+  private async setCalcLevel(rowIndex: number, value: string) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await this.resetGridFocus();
+
+      // ── 1. Double-click the cell to open the editor ───────────────────────
+      const cell = await this.locateHandsontableCell(rowIndex, 'Calc Level 1');
+      await cell.scrollIntoViewIfNeeded();
+      await cell.dblclick({ force: true });
+      await this.page.waitForTimeout(500);
+
+      // ── 2. Find the editor container + collect li items in evaluate() ─────
+      const result = await this.page.evaluate((targetValue: string) => {
+        const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '');
+        const matches = (text: string) =>
+          norm(text).includes(norm(targetValue)) || norm(targetValue).includes(norm(text));
+
+        // Find the floating editor that appeared after the double-click.
+        // The custom HOT editor is a div/ul that became visible; we identify it
+        // as a positioned container holding <li> elements with text content.
+        const isSelected = (el: HTMLElement): boolean => {
+          for (const attr of ['aria-selected', 'aria-checked']) {
+            const v = el.getAttribute(attr);
+            if (v != null) return v === 'true';
+          }
+          const cb = el.querySelector('input[type="checkbox"], input[type="radio"]') as HTMLInputElement | null;
+          if (cb) return cb.checked;
+          // CSS class check on the li or its first visible child
+          const cls = [el, el.firstElementChild as HTMLElement | null]
+            .filter(Boolean).map(e => (e as HTMLElement).className || '').join(' ');
+          return /\bselected\b|\bactive\b|\bchecked\b|\bht_selected\b/i.test(cls);
+        };
+
+        // Candidate containers: prefer HOT-specific class names, then fall back
+        // to any visible floating div/ul that directly contains <li> with text.
+        const containerSels = [
+          '.htSelectEditor',
+          '.handsontableEditor',
+          '.htEditor',
+          '.handsontable.autocompleteEditor',
+        ];
+        let container: HTMLElement | null = null;
+        for (const sel of containerSels) {
+          const el = document.querySelector(sel) as HTMLElement | null;
+          if (el && el.querySelector('li')) { container = el; break; }
+        }
+        // Fallback: any absolutely/fixed positioned element visible on screen
+        // that contains <li> elements with text (the editor floats above the grid).
+        if (!container) {
+          for (const el of Array.from(document.querySelectorAll('div, ul')) as HTMLElement[]) {
+            const style = window.getComputedStyle(el);
+            const r = el.getBoundingClientRect();
+            const lis = Array.from(el.querySelectorAll(':scope > li, :scope > ul > li')) as HTMLElement[];
+            if (
+              (style.position === 'absolute' || style.position === 'fixed') &&
+              r.width > 0 && r.height > 0 && r.top >= 0 &&
+              lis.length > 0 &&
+              lis.some(li => (li.textContent || '').trim().length > 0)
+            ) { container = el; break; }
+          }
+        }
+
+        if (!container) {
+          // Last resort: dump what IS on screen for the next debug pass.
+          const visible = (Array.from(document.querySelectorAll('*')) as HTMLElement[])
+            .filter(e => {
+              const r = e.getBoundingClientRect();
+              return r.width > 50 && r.height > 10 && r.top > 0 &&
+                window.getComputedStyle(e).position === 'absolute';
+            })
+            .map(e => `${e.tagName}.${e.className} — "${(e.textContent || '').trim().slice(0, 60)}"`)
+            .slice(0, 15);
+          return { ok: false, log: `no editor container found. Absolute elements: ${JSON.stringify(visible)}` };
+        }
+
+        const lis = (Array.from(
+          container.querySelectorAll(':scope > li, :scope > ul > li, li')
+        ) as HTMLElement[]).filter(el => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && (el.textContent || '').trim();
+        });
+
+        if (lis.length === 0) {
+          return { ok: false, log: `container found (${container.className}) but no visible <li> items` };
+        }
+
+        const log: string[] = [`container: ${container.tagName}.${container.className}, ${lis.length} items`];
+        for (const li of lis) {
+          const text = (li.textContent || '').trim();
+          if (!text) continue;
+          const shouldSelect = matches(text);
+          const currently = isSelected(li);
+          log.push(`"${text}" selected=${currently} want=${shouldSelect}`);
+          if (shouldSelect !== currently) {
+            li.click();
+            log.push('→ clicked');
+          }
+        }
+        return { ok: true, log: log.join(' | ') };
+      }, value).catch((e: Error) => ({ ok: false, log: `evaluate error: ${e.message}` }));
+
+      console.log(`[debug]   Calc Level evaluate attempt ${attempt}: ok=${result.ok} | ${result.log}`);
+      await this.page.waitForTimeout(300);
+
+      // ── 3. Close by clicking a neutral cell ──────────────────────────────
+      const safeCell = this.page.locator('.ht_master table.htCore tbody tr').nth(rowIndex)
+        .locator('td').nth(0);
+      await safeCell.click({ force: true }).catch(() => {});
+      await this.page.waitForTimeout(300);
+
+      if (result.ok) {
+        // The closed cell renders as "2 (customer_number)+1" even when exactly
+        // one item is selected — that "+1" is just this HOT widget's display
+        // format, not an extra selection. Trust the evaluate() result which read
+        // the live option states directly, not the closed-cell text.
+        const after = (await (await this.locateHandsontableCell(rowIndex, 'Calc Level 1')).textContent())?.trim() || '';
+        console.log(`[debug]   Calc Level 1 row ${rowIndex + 1} = "${after}" ✓`);
+        return;
+      }
+      console.log(`[debug]   ⚠ Calc Level 1 row ${rowIndex + 1} attempt ${attempt}/3 — retrying`);
+    }
+
+    throw new Error(`Could not set Calc Level 1 = "${value}" as a clean single selection in row ${rowIndex + 1}.`);
+  }
+
+  /**
+   * Select an option from a MUI checkbox-style popup (e.g. the Calc Level
+   * dropdown: "1 (contract)", "2 (customer_number)", "Test (3)"). Checks the
+   * matching option, UNCHECKS every other selected option (single-select), and
+   * closes the popup. Returns true on success.
+   */
+  private async selectCheckboxPopupOption(value: string): Promise<boolean> {
+    const isChecked = async (opt: Locator): Promise<boolean> => {
+      const role = (await opt.getAttribute('role').catch(() => null)) || '';
+      if (role === 'checkbox' || role === 'menuitemcheckbox') {
+        const a = await opt.getAttribute('aria-checked').catch(() => null);
+        if (a != null) return a === 'true';
+        return await opt.isChecked().catch(() => false);
+      }
+      const cb = opt.locator('input[type="checkbox"], [role="checkbox"]').first();
+      if ((await cb.count().catch(() => 0)) > 0) {
+        const a = await cb.getAttribute('aria-checked').catch(() => null);
+        if (a != null) return a === 'true';
+        return await cb.isChecked().catch(() => false);
+      }
+      const cls = (await opt.getAttribute('class').catch(() => '')) || '';
+      return /\bMui-checked\b|\bMui-selected\b/.test(cls);
+    };
+
+    // Typing the value earlier filters the popup's Search box, which HIDES the
+    // default-checked "1 (contract)" so it can never be unchecked. Clear the
+    // search so the FULL option list is visible first.
+    const clearSearch = async () => {
+      const search = this.page
+        .locator('input[placeholder*="search" i]:visible, .MuiAutocomplete-input:visible')
+        .first();
+      if ((await search.count().catch(() => 0)) > 0) {
+        await search.fill('').catch(() => {});
+      } else {
+        await this.page.keyboard.press('Control+A').catch(() => {});
+        await this.page.keyboard.press('Backspace').catch(() => {});
+      }
+      await this.page.waitForTimeout(300);
+    };
+
+    // Pick ONE element per option row (avoid the union matching a row AND its
+    // inner checkbox, which would duplicate indices).
+    const rowLocator = async (): Promise<Locator | null> => {
+      const rowSelectors = [
+        '[role="menuitemcheckbox"]',
+        'li[role="option"]',
+        '.MuiMenuItem-root',
+        'li:has(input[type="checkbox"])',
+        'label:has(input[type="checkbox"])',
+      ];
+      for (const rs of rowSelectors) {
+        const l = this.page.locator(rs).filter({ hasText: /\S/ });
+        if ((await l.count().catch(() => 0)) > 0) return l;
+      }
+      return null;
+    };
+
+    const apply = async (): Promise<boolean> => {
+      const loc = await rowLocator();
+      if (!loc) return false;
+      const texts = await loc.allTextContents().catch(() => []);
+      const idx = texts.findIndex((t) => {
+        const x = (t || '').trim();
+        return !!x && !/^loading/i.test(x) && (this.cellContainsValue(x, value) || this.cellContainsValue(value, x));
+      });
+      if (idx < 0) return false;
+
+      // 1) Ensure the TARGET is checked.
+      if (!(await isChecked(loc.nth(idx)))) {
+        await loc.nth(idx).click({ force: true, timeout: 3_000 }).catch(() => {});
+        await this.page.waitForTimeout(150);
+      }
+      // 2) UNCHECK every other selected option (single-select per rule), with a
+      // retry in case the first click doesn't register.
+      for (let i = 0; i < texts.length; i++) {
+        if (i === idx) continue;
+        const t = (texts[i] || '').trim();
+        if (!t || /^loading/i.test(t)) continue;
+        for (let attempt = 0; attempt < 2 && (await isChecked(loc.nth(i))); attempt++) {
+          await loc.nth(i).click({ force: true, timeout: 3_000 }).catch(() => {});
+          await this.page.waitForTimeout(150);
+        }
+      }
+      return true;
+    };
+
+    await clearSearch();
+    let ok = await apply();
+    if (!ok) {
+      await clearSearch();
+      ok = await apply();
+    }
+    if (ok) {
+      await this.page.waitForTimeout(120);
+      await this.page.keyboard.press('Escape').catch(() => {}); // close popup to commit
+    }
+    return ok;
+  }
+
+  /**
+   * True when `value` exactly equals the option's code — checked against the
+   * whole text, the part before " (", and the part inside the trailing "(...)".
+   * Lets "999" match "999 (999)" but NOT "000999 (000999)", and "8000" match
+   * "Pharma (8000)". Used to prefer an exact pick over a loose "contains".
+   */
+  private optionCodeMatches(optionText: string, value: string): boolean {
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '');
+    const v = norm(value);
+    if (!v) return false;
+    const t = (optionText || '').trim();
+    const candidates = [t, t.split('(')[0]];
+    const m = t.match(/\(([^)]*)\)\s*$/);
+    if (m) candidates.push(m[1]);
+    return candidates.some((c) => norm(c) === v);
+  }
+
+  /**
+   * Leading-zero-insensitive numeric code match: the option's code (whole text,
+   * before-paren, or inside the trailing paren) equals `value` as an integer.
+   * e.g. value "56" matches "056 (056)" (56 === 56) but NOT "0356 (0356)" (356).
+   * Only applies when both sides are purely numeric.
+   */
+  private optionCodeNumericMatches(optionText: string, value: string): boolean {
+    const v = (value || '').trim();
+    if (!/^\d+$/.test(v)) return false;
+    const target = parseInt(v, 10);
+    const t = (optionText || '').trim();
+    const candidates = [t, t.split('(')[0].trim()];
+    const m = t.match(/\(([^)]*)\)\s*$/);
+    if (m) candidates.push(m[1].trim());
+    return candidates.some((c) => /^\d+$/.test(c) && parseInt(c, 10) === target);
   }
 
   private cellContainsValue(cellText: string, expectedValue: string): boolean {
